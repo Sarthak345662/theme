@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 # =====================================================================
-#  Orbital Theme Manager - Pterodactyl v2
+#  Orbital Theme Manager - Pterodactyl v2 (extension based)
 #  1) Install   2) Uninstall   3) Update
 # =====================================================================
 
-# ---- EDIT THESE 3 LINES AFTER UPLOADING TO GITHUB -------------------
-GH_USER="YOUR_GITHUB_USERNAME"
-GH_REPO="YOUR_REPO_NAME"
+GH_USER="Sarthak345662"
+GH_REPO="theme"
 GH_BRANCH="main"
-# ---------------------------------------------------------------------
 
-THEME_ID="orbital"
+EXT_ID="orbital"
 PANEL_DIR="${PANEL_DIR:-/var/www/pterodactyl}"
+STAGE="/var/tmp/orbital-ext-stage"   # kept after install on purpose (panel may link to it)
 
 R=$'\e[31m'; G=$'\e[32m'; Y=$'\e[33m'; C=$'\e[36m'; B=$'\e[1m'; N=$'\e[0m'
 ok()   { echo -e "${G}✔${N} $*"; }
@@ -20,16 +19,12 @@ warn() { echo -e "${Y}!${N} $*"; }
 fail() { echo -e "${R}✘ $*${N}"; }
 
 TMP=""
-cleanup() { [ -n "$TMP" ] && rm -rf "$TMP"; }
+cleanup() { if [ -n "$TMP" ]; then rm -rf "$TMP"; fi; }
 trap cleanup EXIT
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd)"
 
-need_root() {
-  if [ "$(id -u)" -ne 0 ]; then
-    fail "Run this as root (sudo bash install.sh)"; exit 1
-  fi
-}
+need_root() { [ "$(id -u)" -eq 0 ] || { fail "Run as root (sudo bash install.sh)"; exit 1; }; }
 
 find_panel() {
   if [ ! -f "$PANEL_DIR/artisan" ]; then
@@ -47,109 +42,111 @@ art() {
     else php artisan "$@"; fi )
 }
 
-panel_version() {
-  local v
-  v="$(art p:info 2>/dev/null | grep -i 'panel version' | head -1 | sed 's/^[^:]*:[[:space:]]*//')"
-  [ -z "$v" ] && v="$(grep -E "'version'[[:space:]]*=>" "$PANEL_DIR/config/app.php" 2>/dev/null | head -1 | sed "s/.*=>[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/")"
-  echo "${v:-unknown}"
-}
+ver_of() { sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" | head -1; }
 
 check_v2() {
   local out rc
   out="$(art list --raw 2>&1)"; rc=$?
   if [ $rc -ne 0 ]; then
-    fail "php artisan failed to run (exit $rc). Real error:"
-    echo "$out" | head -n 8
-    warn "Check: php -v, file permissions of $PANEL_DIR, and that .env exists."
+    fail "php artisan failed (exit $rc). Real error:"; echo "$out" | head -n 8
     return 1
   fi
-  if ! echo "$out" | grep -Eq '^p:theme:(apply|activate)'; then
-    fail "No p:theme:* commands found - this panel is NOT Pterodactyl v2."
-    warn "Detected panel version: $(panel_version)"
-    warn "Orbital v2 theme works only on Pterodactyl 2.0 beta or newer."
-    warn "Your panel is v1.x: upgrade to v2 first (test on a copy!):"
-    warn "  https://docs.pterodactyl.io/v2/upgrading/upgrading-from-v1"
+  if ! echo "$out" | grep -q '^p:extension:install'; then
+    fail "This panel has no extension system (p:extension:install missing) - not Pterodactyl v2."
     return 1
   fi
 }
 
-# Get theme files into $SRC. $1 = auto | remote
+is_installed() { art p:extension:list 2>/dev/null | grep -qiw "$EXT_ID"; }
+
+installed_ver() {
+  local f="$PANEL_DIR/extensions/$EXT_ID/extension.json"
+  if [ -f "$f" ]; then ver_of "$f"; else echo "?"; fi
+}
+
+# Put extension files into $SRC. $1 = auto | remote
 get_source() {
   local mode="${1:-auto}"
-  if [ "$mode" = "auto" ] && [ -f "$SCRIPT_DIR/theme/theme.json" ]; then
-    SRC="$SCRIPT_DIR/theme"; info "Using local theme files"; return 0
-  fi
-  if [[ "$GH_USER" == YOUR_* ]]; then
-    fail "Set GH_USER / GH_REPO at the top of install.sh first."; return 1
+  if [ "$mode" = "auto" ] && [ -f "$SCRIPT_DIR/extension/extension.json" ]; then
+    SRC="$SCRIPT_DIR/extension"; info "Using local extension files"; return 0
   fi
   command -v curl >/dev/null && command -v tar >/dev/null || { fail "curl and tar are required"; return 1; }
   TMP="$(mktemp -d)"
-  info "Downloading from github.com/$GH_USER/$GH_REPO ($GH_BRANCH)"
+  info "Downloading github.com/$GH_USER/$GH_REPO ($GH_BRANCH)"
   if ! curl -fsSL "https://github.com/$GH_USER/$GH_REPO/archive/refs/heads/$GH_BRANCH.tar.gz" | tar -xz -C "$TMP" --strip-components=1; then
-    fail "Download failed. Check the repo name, branch and that it is public."; return 1
+    fail "Download failed. Check repo name/branch and that the repo is public."; return 1
   fi
-  SRC="$TMP/theme"
-  [ -f "$SRC/theme.json" ] && [ -f "$SRC/tokens.css" ] || { fail "theme/theme.json or theme/tokens.css missing in repo"; return 1; }
+  SRC="$TMP/extension"
+  [ -f "$SRC/extension.json" ] && [ -f "$SRC/dist/client.js" ] || { fail "extension/extension.json or extension/dist/client.js missing in repo"; return 1; }
 }
 
-ver_of() { sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" | head -1; }
+# Copy to a path the web user can read
+stage_source() {
+  rm -rf "$STAGE"; mkdir -p "$STAGE"
+  cp -r "$SRC/." "$STAGE/"
+  chown -R "$WEB_USER:$WEB_GROUP" "$STAGE"; chmod -R a+rX "$STAGE"
+}
 
-deploy() {
-  local cmd out rc
-  mkdir -p "$PANEL_DIR/themes"
-  rm -rf "$PANEL_DIR/themes/$THEME_ID"
-  cp -r "$SRC" "$PANEL_DIR/themes/$THEME_ID"
-  chown -R "$WEB_USER:$WEB_GROUP" "$PANEL_DIR/themes/$THEME_ID"
-  # older v2 builds use p:theme:apply, newer ones p:theme:activate
-  if art list --raw 2>/dev/null | grep -q '^p:theme:apply'; then cmd="p:theme:apply"; else cmd="p:theme:activate"; fi
-  info "Running: php artisan $cmd $THEME_ID"
-  out="$(art $cmd "$THEME_ID" 2>&1)"; rc=$?
-  echo "$out"
+remove_existing() {
+  art p:extension:disable "$EXT_ID" >/dev/null 2>&1 || true
+  art p:extension:remove "$EXT_ID" 2>&1 | tail -n 3 || true
+}
+
+install_from_stage() {
+  local out rc a
+  info "Checking package (p:extension:doctor)"
+  out="$(art p:extension:doctor "$STAGE" 2>&1)"; rc=$?
+  echo "$out" | tail -n 15
   if [ $rc -ne 0 ]; then
-    fail "$cmd failed. Themes this panel can see:"
-    art p:theme:list 2>&1 | head -n 20
-    warn "If 'orbital' is not in that list, this panel build loads themes only as extensions (.pteroext)."
-    warn "Send me the output above and the result of: ls $PANEL_DIR/themes"
-    return 1
+    fail "doctor reported problems."
+    read -rp "Continue anyway? [y/N]: " a; [[ "$a" =~ ^[Yy]$ ]] || return 1
   fi
-  chown -R "$WEB_USER:$WEB_GROUP" "$PANEL_DIR/public/assets" 2>/dev/null || true
+  info "Installing and enabling Orbital"
+  out="$(art p:extension:install "$STAGE" --enable 2>&1)"; rc=$?
+  echo "$out"
+  if [ $rc -ne 0 ]; then fail "p:extension:install failed (see output above)."; return 1; fi
   art optimize:clear >/dev/null 2>&1 || true
 }
 
 do_install() {
   check_v2 || return 1
-  if [ -d "$PANEL_DIR/themes/$THEME_ID" ]; then
-    warn "Orbital is already installed (v$(ver_of "$PANEL_DIR/themes/$THEME_ID/theme.json")). Use Update instead, or continue to reinstall."
-    read -rp "Reinstall? [y/N]: " a; [[ "$a" =~ ^[Yy]$ ]] || return 0
-  fi
   get_source auto || return 1
-  deploy || return 1
-  ok "Orbital v$(ver_of "$SRC/theme.json") installed. Hard-refresh the panel (Ctrl+Shift+R)."
+  if is_installed; then
+    warn "Orbital is already installed (v$(installed_ver))."
+    read -rp "Reinstall? [y/N]: " a; [[ "$a" =~ ^[Yy]$ ]] || return 0
+    remove_existing
+  fi
+  stage_source
+  install_from_stage || return 1
+  ok "Orbital v$(ver_of "$SRC/extension.json") installed. Hard-refresh the panel (Ctrl+Shift+R)."
 }
 
 do_uninstall() {
   check_v2 || return 1
-  if [ ! -d "$PANEL_DIR/themes/$THEME_ID" ]; then warn "Orbital is not installed."; return 0; fi
-  read -rp "Remove Orbital and restore the default look? [y/N]: " a
+  if ! is_installed; then warn "Orbital is not installed."; return 0; fi
+  read -rp "Remove Orbital and restore the stock look? [y/N]: " a
   [[ "$a" =~ ^[Yy]$ ]] || return 0
-  art p:theme:reset || warn "p:theme:reset reported an error"
-  rm -rf "$PANEL_DIR/themes/$THEME_ID"
+  art p:extension:disable "$EXT_ID" 2>&1 | tail -n 3
+  art p:extension:remove "$EXT_ID" 2>&1 | tail -n 3
+  rm -rf "$STAGE"
   art optimize:clear >/dev/null 2>&1 || true
-  ok "Orbital removed. Default theme restored."
+  ok "Orbital removed."
 }
 
 do_update() {
   check_v2 || return 1
-  if [ ! -d "$PANEL_DIR/themes/$THEME_ID" ]; then warn "Orbital is not installed. Use Install first."; return 0; fi
+  if ! is_installed; then warn "Orbital is not installed. Use Install first."; return 0; fi
   local cur new
-  cur="$(ver_of "$PANEL_DIR/themes/$THEME_ID/theme.json")"
+  cur="$(installed_ver)"
   get_source remote || return 1
-  new="$(ver_of "$SRC/theme.json")"
+  new="$(ver_of "$SRC/extension.json")"
   info "Installed: v$cur   Latest: v$new"
   if [ "$cur" = "$new" ]; then
     read -rp "Already on latest. Reinstall anyway? [y/N]: " a; [[ "$a" =~ ^[Yy]$ ]] || return 0
   fi
-  deploy || return 1
+  remove_existing
+  stage_source
+  install_from_stage || return 1
   ok "Updated to v$new. Hard-refresh the panel (Ctrl+Shift+R)."
 }
 
@@ -163,8 +160,8 @@ banner() {
   echo "  \\___/|_| \\_\\____/___| |_/_/   \\_\\_____|"
   echo -e "${N}${C}   Pterodactyl v2 Theme Manager${N}"
   echo "   Panel: $PANEL_DIR"
-  if [ -d "$PANEL_DIR/themes/$THEME_ID" ]; then
-    echo -e "   Status: ${G}installed v$(ver_of "$PANEL_DIR/themes/$THEME_ID/theme.json")${N}"
+  if is_installed; then
+    echo -e "   Status: ${G}installed (v$(installed_ver))${N}"
   else
     echo -e "   Status: ${R}not installed${N}"
   fi

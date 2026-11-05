@@ -1,0 +1,17 @@
+{
+    "id": "orbital",
+    "name": "Orbital",
+    "version": "1.0.0",
+    "description": "Amber on warm charcoal theme, built purely from design-token overrides.",
+    "author": "Sarthak34",
+    "requires": {
+        "panel": "^2.0.0-dev",
+        "sdk": "^2.0.0-beta.4",
+        "php": "^8.3"
+    },
+    "ui": {
+        "entry": "dist/client.js",
+        "mode": "native",
+        "prefix": "orb"
+    }
+}

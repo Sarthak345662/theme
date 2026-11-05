@@ -1,34 +1,31 @@
-# Orbital - Pterodactyl v2 Theme
+# Orbital - Pterodactyl v2 theme
 
-Amber-on-charcoal theme for **Pterodactyl v2 (2.0 beta+)**. No build step needed.
+Amber-on-charcoal theme for Pterodactyl v2 (extension based, no Node needed).
 
-## Repo layout
+## Repo layout (upload all of this to github.com/Sarthak345662/theme, branch main)
 ```
-install.sh        <- menu: 1 Install, 2 Uninstall, 3 Update
-theme/
-  theme.json      <- id, name, version (bump version on every update)
-  tokens.css      <- all colours / radius / console colours
-  assets/         <- images and fonts (published to /assets/theme/)
+install.sh                 menu: 1 Install, 2 Uninstall, 3 Update
+build.sh                   rebuilds extension/dist/client.js from src/theme.css
+src/theme.css              <- edit colours here
+extension/extension.json   id, name, version  (bump version on every update)
+extension/dist/client.js   generated
 ```
 
-## Setup (once)
-1. Upload this whole folder to a **public** GitHub repo.
-2. Open `install.sh` and set `GH_USER`, `GH_REPO`, `GH_BRANCH` at the top.
-
-## Install on the panel server (one command)
+## Install on the panel server
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/YOUR_USER/YOUR_REPO/main/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/Sarthak345662/theme/main/install.sh)
 ```
-Menu: **1** Install, **2** Uninstall, **3** Update. Default panel path is `/var/www/pterodactyl`
-(override: `PANEL_DIR=/path bash install.sh`).
 
-## Updating the theme
-Edit `theme/tokens.css`, change `"version"` in `theme/theme.json`, push to GitHub,
-then run the command again and pick **3**.
+## Update workflow
+1. Edit `src/theme.css`
+2. `bash build.sh`
+3. Bump `"version"` in `extension/extension.json`
+4. Push to GitHub, then run the command above and choose **3**
 
-## Manual commands (what the script runs)
+## Manual commands (what the menu runs)
 ```bash
-php artisan p:theme:list
-php artisan p:theme:apply orbital
-php artisan p:theme:reset
+php artisan p:extension:install /path/to/extension --enable
+php artisan p:extension:disable orbital
+php artisan p:extension:remove orbital
 ```
+Disable or remove Orbital to get the stock look back.
