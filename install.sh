@@ -5,8 +5,8 @@
 # =====================================================================
 
 # ---- EDIT THESE 3 LINES AFTER UPLOADING TO GITHUB -------------------
-GH_USER="YOUR_GITHUB_USERNAME"
-GH_REPO="YOUR_REPO_NAME"
+GH_USER="Sarthak345662"
+GH_REPO="theme"
 GH_BRANCH="main"
 # ---------------------------------------------------------------------
 
