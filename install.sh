@@ -5,8 +5,8 @@
 # =====================================================================
 
 # ---- EDIT THESE 3 LINES AFTER UPLOADING TO GITHUB -------------------
-GH_USER="Sarthak345662"
-GH_REPO="theme"
+GH_USER="YOUR_GITHUB_USERNAME"
+GH_REPO="YOUR_REPO_NAME"
 GH_BRANCH="main"
 # ---------------------------------------------------------------------
 
@@ -47,10 +47,28 @@ art() {
     else php artisan "$@"; fi )
 }
 
+panel_version() {
+  local v
+  v="$(art p:info 2>/dev/null | grep -i 'panel version' | head -1 | sed 's/^[^:]*:[[:space:]]*//')"
+  [ -z "$v" ] && v="$(grep -E "'version'[[:space:]]*=>" "$PANEL_DIR/config/app.php" 2>/dev/null | head -1 | sed "s/.*=>[[:space:]]*['\"]\([^'\"]*\)['\"].*/\1/")"
+  echo "${v:-unknown}"
+}
+
 check_v2() {
-  if ! art list --raw 2>/dev/null | grep -q '^p:theme:apply'; then
-    fail "This panel does not support v2 themes (p:theme:apply missing)."
-    fail "Orbital needs Pterodactyl v2 (2.0.0-beta or newer)."
+  local out rc
+  out="$(art list --raw 2>&1)"; rc=$?
+  if [ $rc -ne 0 ]; then
+    fail "php artisan failed to run (exit $rc). Real error:"
+    echo "$out" | head -n 8
+    warn "Check: php -v, file permissions of $PANEL_DIR, and that .env exists."
+    return 1
+  fi
+  if ! echo "$out" | grep -q '^p:theme:apply'; then
+    fail "p:theme:apply not found - this panel is NOT Pterodactyl v2."
+    warn "Detected panel version: $(panel_version)"
+    warn "Orbital v2 theme works only on Pterodactyl 2.0 beta or newer."
+    warn "Your panel is v1.x: upgrade to v2 first (test on a copy!):"
+    warn "  https://docs.pterodactyl.io/v2/upgrading/upgrading-from-v1"
     return 1
   fi
 }
