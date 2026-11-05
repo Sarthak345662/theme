@@ -34,10 +34,14 @@
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (j) {
                 if (!j || !j.data) return;
+                var favs = [];
+                try { favs = JSON.parse(localStorage.getItem('orbital:favs') || '[]'); } catch (e) {}
                 servers = j.data.map(function (s) {
                     var a = s.attributes || {};
-                    return { label: a.name || a.identifier, hint: 'SERVER', href: '/server/' + (a.identifier || '') };
-                }).filter(function (s) { return s.href !== '/server/'; });
+                    var f = favs.indexOf(a.identifier) !== -1;
+                    return { label: a.name || a.identifier, hint: f ? '\u2605 SERVER' : 'SERVER', fav: f, href: '/server/' + (a.identifier || '') };
+                }).filter(function (s) { return s.href !== '/server/'; })
+                  .sort(function (x, y) { return (y.fav ? 1 : 0) - (x.fav ? 1 : 0); });
                 if (root) render();
             })
             .catch(function () {});

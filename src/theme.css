@@ -84,7 +84,11 @@ html.dark body {
     -webkit-font-smoothing: antialiased;
 }
 html.dark h1, html.dark h2, html.dark h3 { letter-spacing: -0.015em; }
-html.dark :focus-visible { outline: 2px solid #e0913c; outline-offset: 2px; }
+html.dark button:focus-visible, html.dark a:focus-visible, html.dark input:focus-visible,
+html.dark select:focus-visible, html.dark textarea:focus-visible, html.dark [role="button"]:focus-visible,
+html.dark [role="tab"]:focus-visible, html.dark [role="switch"]:focus-visible { outline: 2px solid #e0913c; outline-offset: 2px; }
+/* never outline big containers that only receive programmatic focus */
+html.dark [tabindex="-1"]:focus, html.dark [tabindex="-1"]:focus-visible, html.dark main:focus-visible, html.dark #app:focus-visible { outline: none !important; }
 html.dark button, html.dark a { transition: background-color .15s ease, color .15s ease, border-color .15s ease, box-shadow .2s ease; }
 html.dark button:hover:not(:disabled) { box-shadow: 0 0 0 1px rgba(224, 145, 60, 0.35), 0 6px 22px rgba(224, 145, 60, 0.12); }
 @media (prefers-reduced-motion: reduce) {
