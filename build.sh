@@ -25,6 +25,11 @@ mkdir -p extension/dist
     el.textContent = CSS;
 })();
 
+// Ctrl/Cmd+K command palette (src/palette.js)
+JS
+  cat src/palette.js
+  cat <<'JS'
+
 // A theme needs no slots, screens or components.
 export default definePterodactylExtension({
     setup() {},
