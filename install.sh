@@ -63,8 +63,8 @@ check_v2() {
     warn "Check: php -v, file permissions of $PANEL_DIR, and that .env exists."
     return 1
   fi
-  if ! echo "$out" | grep -q '^p:theme:apply'; then
-    fail "p:theme:apply not found - this panel is NOT Pterodactyl v2."
+  if ! echo "$out" | grep -Eq '^p:theme:(apply|activate)'; then
+    fail "No p:theme:* commands found - this panel is NOT Pterodactyl v2."
     warn "Detected panel version: $(panel_version)"
     warn "Orbital v2 theme works only on Pterodactyl 2.0 beta or newer."
     warn "Your panel is v1.x: upgrade to v2 first (test on a copy!):"
@@ -95,11 +95,24 @@ get_source() {
 ver_of() { sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$1" | head -1; }
 
 deploy() {
+  local cmd out rc
   mkdir -p "$PANEL_DIR/themes"
   rm -rf "$PANEL_DIR/themes/$THEME_ID"
   cp -r "$SRC" "$PANEL_DIR/themes/$THEME_ID"
   chown -R "$WEB_USER:$WEB_GROUP" "$PANEL_DIR/themes/$THEME_ID"
-  art p:theme:apply "$THEME_ID" || { fail "p:theme:apply failed"; return 1; }
+  # older v2 builds use p:theme:apply, newer ones p:theme:activate
+  if art list --raw 2>/dev/null | grep -q '^p:theme:apply'; then cmd="p:theme:apply"; else cmd="p:theme:activate"; fi
+  info "Running: php artisan $cmd $THEME_ID"
+  out="$(art $cmd "$THEME_ID" 2>&1)"; rc=$?
+  echo "$out"
+  if [ $rc -ne 0 ]; then
+    fail "$cmd failed. Themes this panel can see:"
+    art p:theme:list 2>&1 | head -n 20
+    warn "If 'orbital' is not in that list, this panel build loads themes only as extensions (.pteroext)."
+    warn "Send me the output above and the result of: ls $PANEL_DIR/themes"
+    return 1
+  fi
+  chown -R "$WEB_USER:$WEB_GROUP" "$PANEL_DIR/public/assets" 2>/dev/null || true
   art optimize:clear >/dev/null 2>&1 || true
 }
 
