@@ -33,7 +33,12 @@ find_panel() {
     [ -f "$PANEL_DIR/artisan" ] || { fail "artisan not found in $PANEL_DIR"; exit 1; }
   fi
   WEB_USER="$(stat -c '%U' "$PANEL_DIR/artisan")"
-  WEB_GROUP="$(stat -c '%G' "$PANEL_DIR/artisan")"
+  if [ "$WEB_USER" = "root" ]; then
+    for u in www-data nginx apache; do
+      if id "$u" >/dev/null 2>&1; then WEB_USER="$u"; break; fi
+    done
+  fi
+  WEB_GROUP="$(id -gn "$WEB_USER" 2>/dev/null || echo "$WEB_USER")"
 }
 
 art() {
@@ -62,6 +67,19 @@ is_installed() { art p:extension:list 2>/dev/null | grep -qiw "$EXT_ID"; }
 installed_ver() {
   local f="$PANEL_DIR/extensions/$EXT_ID/extension.json"
   if [ -f "$f" ]; then ver_of "$f"; else echo "?"; fi
+}
+
+ensure_writable() {
+  local a
+  if command -v runuser >/dev/null 2>&1 && ! runuser -u "$WEB_USER" -- test -w "$PANEL_DIR" 2>/dev/null; then
+    warn "User '$WEB_USER' cannot write to $PANEL_DIR (the panel needs this to install extensions)."
+    read -rp "Run: chown -R $WEB_USER:$WEB_GROUP $PANEL_DIR ? [Y/n]: " a
+    if [[ ! "$a" =~ ^[Nn]$ ]]; then
+      chown -R "$WEB_USER:$WEB_GROUP" "$PANEL_DIR" && ok "Permissions fixed" || { fail "chown failed"; return 1; }
+    else
+      return 1
+    fi
+  fi
 }
 
 # Put extension files into $SRC. $1 = auto | remote
@@ -101,6 +119,7 @@ install_from_stage() {
     fail "doctor reported problems."
     read -rp "Continue anyway? [y/N]: " a; [[ "$a" =~ ^[Yy]$ ]] || return 1
   fi
+  ensure_writable || return 1
   info "Installing and enabling Orbital"
   out="$(art p:extension:install "$STAGE" --enable 2>&1)"; rc=$?
   echo "$out"
