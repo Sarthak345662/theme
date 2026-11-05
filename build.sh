@@ -30,15 +30,16 @@ JS
   cat src/palette.js
   echo
   cat src/favourites.js
+  echo
+  cat src/cards.js
   cat <<'JS'
 
 export default definePterodactylExtension({
     setup(ctx) {
-        try {
-            if (R && ctx && ctx.slots) ctx.slots.register('dashboard.serverRow.name.after', OrbitalStar);
-        } catch (e) {
-            console.warn('[orbital] favourites disabled:', e);
-        }
+        if (!R || !ctx) return;
+        try { if (ctx.slots) ctx.slots.register('dashboard.serverRow.name.after', OrbitalStar); } catch (e) { console.warn('[orbital] star slot:', e); }
+        // Declared in extension.json (ui.components), so it must be registered here.
+        ctx.components.replace('dashboard.serverCard', OrbitalCard);
     },
 });
 JS

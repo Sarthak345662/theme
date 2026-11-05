@@ -34,9 +34,8 @@ function applyOrder() {
     });
 }
 
-function OrbitalStar(props) {
-    var data = props && props.data;
-    var id = data && data.attributes ? data.attributes.identifier : null;
+function FavButton(props) {
+    var id = props && props.id;
     var st = R.useState(id ? isFav(id) : false), fav = st[0], setFav = st[1];
     R.useEffect(function () {
         function h() { setFav(id ? isFav(id) : false); scheduleOrder(); }
@@ -58,4 +57,11 @@ function OrbitalStar(props) {
             color: fav ? '#e0913c' : 'var(--muted-foreground)',
         },
     }, fav ? '\u2605' : '\u2606');
+}
+
+// Used by the slot (native card fallback)
+function OrbitalStar(props) {
+    var data = props && props.data;
+    var id = data && data.attributes ? data.attributes.identifier : null;
+    return R.createElement(FavButton, { id: id });
 }

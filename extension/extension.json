@@ -1,7 +1,7 @@
 {
     "id": "orbital",
     "name": "Orbital",
-    "version": "1.2.0",
+    "version": "1.3.0",
     "description": "Amber on warm charcoal theme, built purely from design-token overrides.",
     "author": "Sarthak34",
     "requires": {
@@ -12,6 +12,9 @@
     "ui": {
         "entry": "dist/client.js",
         "mode": "native",
-        "prefix": "orb"
+        "prefix": "orb",
+        "components": [
+            "dashboard.serverCard"
+        ]
     }
 }
