@@ -1,0 +1,76 @@
+/* Orbital - amber on warm charcoal. Pterodactyl v2 theme tokens. */
+.dark {
+    /* Surfaces */
+    --background: #110e0b;
+    --foreground: #f3ece2;
+    --muted: #1a1511;
+    --muted-foreground: #a99d8f;
+    --card: #211c18;
+    --card-foreground: #f3ece2;
+    --popover: #1c1713;
+    --popover-foreground: #f3ece2;
+
+    /* Brand */
+    --primary: #e0913c;
+    --primary-foreground: #1a120a;
+    --secondary: #2c251f;
+    --secondary-foreground: #f3ece2;
+    --accent: #e0913c;
+    --accent-foreground: #1a120a;
+
+    /* Lines and forms */
+    --border: #342c25;
+    --input: #3a3129;
+    --ring: #e0913c;
+
+    /* Status */
+    --destructive: #e5584f;
+    --destructive-foreground: #ffffff;
+    --success: #5cc48a;
+    --success-foreground: #08140d;
+    --warning: #f0b43c;
+    --warning-foreground: #1a1204;
+
+    /* Charts and avatars */
+    --chart-1: #e0913c;
+    --chart-2: #d6e07b;
+    --chart-3: #5cc48a;
+    --chart-4: #58a6e8;
+    --chart-5: #c98be0;
+
+    /* Shape */
+    --radius: 0.75rem;
+
+    /* Console */
+    --terminal-background: #0c0a08;
+    --terminal-selection: #4a3720;
+    --terminal-selection-foreground: #ffffff;
+    --terminal-ansi-black: #2a231d;
+    --terminal-ansi-red: #e5584f;
+    --terminal-ansi-green: #5cc48a;
+    --terminal-ansi-yellow: #e0913c;
+    --terminal-ansi-blue: #58a6e8;
+    --terminal-ansi-magenta: #c98be0;
+    --terminal-ansi-cyan: #5cc4c4;
+    --terminal-ansi-white: #e8dfd3;
+    --terminal-ansi-bright-black: #5b5148;
+    --terminal-ansi-bright-red: #ff7a70;
+    --terminal-ansi-bright-green: #7be0a8;
+    --terminal-ansi-bright-yellow: #f5b062;
+    --terminal-ansi-bright-blue: #7cc0f5;
+    --terminal-ansi-bright-magenta: #e0a8f0;
+    --terminal-ansi-bright-cyan: #7de0e0;
+    --terminal-ansi-bright-white: #ffffff;
+}
+
+/* Extras (plain CSS, safe to remove) */
+::selection { background: #e0913c; color: #1a120a; }
+
+body {
+    background-image:
+        radial-gradient(1200px 600px at 85% -10%, rgba(224, 145, 60, 0.10), transparent 60%),
+        radial-gradient(900px 500px at -10% 110%, rgba(214, 224, 123, 0.05), transparent 60%);
+    background-attachment: fixed;
+}
+
+* { scrollbar-color: #3a3129 transparent; scrollbar-width: thin; }
